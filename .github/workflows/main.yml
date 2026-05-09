@@ -12,15 +12,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build Application
+      - name: Locate and Build
         run: |
-          # Печатаем список файлов, чтобы убедиться, что мы в нужной папке
-          ls -R
+          echo "=== Ищем файлы проекта ==="
+          # Ищем файл .xcodeproj по всему репозиторию
+          PROJECT_PATH=$(find . -name "*.xcodeproj" -print -quit)
           
-          # Запускаем сборку, явно указывая файл (если он в корне)
-          # Если файл лежит в подпапке, xcodebuild сам его найдет, если мы укажем только схему
-          xcodebuild -project "NextPad.xcodeproj" \
-                     -scheme "NextPad" \
+          if [ -z "$PROJECT_PATH" ]; then
+            echo "ОШИБКА: Файл .xcodeproj не найден в репозитории!"
+            ls -R
+            exit 1
+          fi
+
+          echo "Найден проект: $PROJECT_PATH"
+          
+          # Получаем имя схемы (обычно совпадает с именем файла)
+          SCHEME_NAME=$(basename "$PROJECT_PATH" .xcodeproj)
+          echo "Используем схему: $SCHEME_NAME"
+
+          # Запуск сборки
+          xcodebuild -project "$PROJECT_PATH" \
+                     -scheme "$SCHEME_NAME" \
                      -configuration Release \
                      -derivedDataPath build_output \
                      CODE_SIGNING_ALLOWED=NO \
