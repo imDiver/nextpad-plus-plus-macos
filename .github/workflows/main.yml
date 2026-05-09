@@ -1,12 +1,12 @@
 name: Build-NextPad
 on: 
-  workflow_dispatch: # Позволяет запускать сборку кнопкой вручную
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: macos-latest
     env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # Убираем предупреждение о Node.js
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout code
@@ -14,18 +14,13 @@ jobs:
 
       - name: Build Application
         run: |
-          # Автоматически находим файл проекта .xcodeproj
-          PROJECT_FILE=$(find . -maxdepth 2 -name "*.xcodeproj" | head -n 1)
+          # Печатаем список файлов, чтобы убедиться, что мы в нужной папке
+          ls -R
           
-          # Получаем имя проекта для схемы (убираем путь и расширение)
-          SCHEME_NAME=$(basename "$PROJECT_FILE" .xcodeproj)
-          
-          echo "Found Project: $PROJECT_FILE"
-          echo "Using Scheme: $SCHEME_NAME"
-
-          # Запуск компиляции без подписи кода
-          xcodebuild -project "$PROJECT_FILE" \
-                     -scheme "$SCHEME_NAME" \
+          # Запускаем сборку, явно указывая файл (если он в корне)
+          # Если файл лежит в подпапке, xcodebuild сам его найдет, если мы укажем только схему
+          xcodebuild -project "NextPad.xcodeproj" \
+                     -scheme "NextPad" \
                      -configuration Release \
                      -derivedDataPath build_output \
                      CODE_SIGNING_ALLOWED=NO \
@@ -36,6 +31,5 @@ jobs:
       - name: Upload Result
         uses: actions/upload-artifact@v4
         with:
-          name: NextPad-Compiled-App
-          # Ищем скомпилированное приложение .app в папке вывода
+          name: NextPad-App
           path: build_output/Build/Products/Release/*.app
