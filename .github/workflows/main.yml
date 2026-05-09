@@ -1,4 +1,4 @@
-name: Build-NextPad
+name: Build-NextPad-CMake
 on: 
   workflow_dispatch:
 
@@ -11,37 +11,28 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          submodules: recursive # Важно, если проект использует подмодули
 
-      - name: Locate and Build
+      - name: Install Dependencies
         run: |
-          echo "=== Ищем файлы проекта ==="
-          # Ищем файл .xcodeproj по всему репозиторию
-          PROJECT_PATH=$(find . -name "*.xcodeproj" -print -quit)
-          
-          if [ -z "$PROJECT_PATH" ]; then
-            echo "ОШИБКА: Файл .xcodeproj не найден в репозитории!"
-            ls -R
-            exit 1
-          fi
+          brew install cmake
 
-          echo "Найден проект: $PROJECT_PATH"
-          
-          # Получаем имя схемы (обычно совпадает с именем файла)
-          SCHEME_NAME=$(basename "$PROJECT_PATH" .xcodeproj)
-          echo "Используем схему: $SCHEME_NAME"
-
-          # Запуск сборки
-          xcodebuild -project "$PROJECT_PATH" \
-                     -scheme "$SCHEME_NAME" \
-                     -configuration Release \
-                     -derivedDataPath build_output \
-                     CODE_SIGNING_ALLOWED=NO \
-                     CODE_SIGNING_REQUIRED=NO \
-                     CODE_SIGN_IDENTITY="" \
-                     AD_HOC_CODE_SIGNING_ALLOWED=YES
+      - name: Configure and Build
+        run: |
+          mkdir build
+          cd build
+          # Конфигурация проекта
+          cmake .. -DCMAKE_BUILD_TYPE=Release
+          # Сборка (используем все ядра процессора для скорости)
+          cmake --build . --config Release --parallel $(sysctl -n hw.ncpu)
 
       - name: Upload Result
         uses: actions/upload-artifact@v4
         with:
-          name: NextPad-App
-          path: build_output/Build/Products/Release/*.app
+          name: NextPad-Binary
+          # CMake обычно создает либо .app в папке build, либо бинарный файл
+          path: |
+            build/*.app
+            build/NextPad
+            build/Release/*.app
